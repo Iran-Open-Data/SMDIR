@@ -15,16 +15,16 @@ local_setting_path = root_dir.joinpath("smdir_conf.yaml")
 settings_dict = {}
 with default_settings_path.open(encoding="utf-8") as file:
     settings_dict.update(yaml.safe_load(file))
-with settings_path.open(encoding="utf-8") as file:
-    try:
+try:
+    with settings_path.open(encoding="utf-8") as file:
         settings_dict.update(yaml.safe_load(file))
-    except FileNotFoundError:
-        pass
-with local_setting_path.open(encoding="utf-8") as file:
-    try:
+except FileNotFoundError:
+    pass
+try:
+    with local_setting_path.open(encoding="utf-8") as file:
         settings_dict.update(yaml.safe_load(file))
-    except FileNotFoundError:
-        pass
+except FileNotFoundError:
+    pass
 
 
 def get_metadata(*path_parts: str) -> dict | list:
