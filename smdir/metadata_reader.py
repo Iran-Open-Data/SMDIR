@@ -6,15 +6,25 @@ import yaml
 
 
 package_dir = Path(__file__).parent
+root_dir = Path()
 
 default_settings_path = package_dir.joinpath("conf", "default_settings.yaml")
 settings_path = package_dir.joinpath("conf", "settings.yaml")
+local_setting_path = root_dir.joinpath("smdir_conf.yaml")
 
 settings_dict = {}
 with default_settings_path.open(encoding="utf-8") as file:
     settings_dict.update(yaml.safe_load(file))
 with settings_path.open(encoding="utf-8") as file:
-    settings_dict.update(yaml.safe_load(file))
+    try:
+        settings_dict.update(yaml.safe_load(file))
+    except FileNotFoundError:
+        pass
+with local_setting_path.open(encoding="utf-8") as file:
+    try:
+        settings_dict.update(yaml.safe_load(file))
+    except FileNotFoundError:
+        pass
 
 
 def get_metadata(*path_parts: str) -> dict | list:
@@ -49,7 +59,6 @@ class IFB(BaseModel):
     folder: Path = lib_settings.data_dir.joinpath("ifb")
     bond_list: Path = folder.joinpath("bond_list.parquet")
     bond_page: Path = folder.joinpath("bond_page.parquet")
-    bond_list: Path = folder.joinpath("bond_list.parquet")
     payment_table: Path = folder.joinpath("payment_table.parquet")
     bond_info: Path = folder.joinpath("bond_info.parquet")
 
