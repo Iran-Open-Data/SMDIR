@@ -1,0 +1,7 @@
+
+.venv/*
+
+*.pyc
+
+settings.yaml
+tokens.toml

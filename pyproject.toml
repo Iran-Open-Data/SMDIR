@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "smdir"
+version = "0.1.0"
+description = ""
+authors = ["mohammad amin alavian <m.amin.alavian@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+pyarrow = "^14.0.1"
+pandas = "^2.1.3"
+pyyaml = "^6.0.1"
+requests = "^2.31.0"
+pydantic = "^2.5.1"
+bs4 = "^0.0.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+pytest = "^7.4.3"
+ipykernel = "^6.26.0"
+
+[tool.poetry.group.maintain.dependencies]
+boto3 = "^1.29.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
