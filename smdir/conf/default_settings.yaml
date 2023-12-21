@@ -2,7 +2,7 @@
 package_name: SMDIR
 
 # Local Directory
-local_dir: Data
+data_directory: Data
 in_root: false
 
 # Bucket Address
