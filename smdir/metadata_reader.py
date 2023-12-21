@@ -37,9 +37,20 @@ def get_metadata(*path_parts: str) -> dict | list:
     return metadata
 
 
+def save_metadata(content: dict | list, *path_parts: str) -> None:
+    path_parts = ["metadata"] + list(path_parts)
+    path_parts[-1] = path_parts[-1] + ".yaml"
+    caller_path = Path(inspect.stack()[1].filename)
+    meta_path = caller_path.parent.joinpath(*path_parts)
+    with meta_path.open(mode="w", encoding="utf-8") as yaml_file:
+        yaml.safe_dump(content, yaml_file, encoding="utf-8", allow_unicode=True)
+
+
 class Settings(BaseModel):
     data_dir: Path = Path(settings_dict["data_directory"])
-    online_dir: str = settings_dict["online_directory"]
+    package_name: str = settings_dict["package_name"]
+    bucket_address: str = settings_dict["bucket_address"]
+    online_dir: str = f"{bucket_address}/{package_name}"
 
     ifb_dir: Path = data_dir.joinpath("ifb")
     tsetmc_dir: Path = data_dir.joinpath("tsetmc")
@@ -56,15 +67,22 @@ lib_settings = Settings()
 
 
 class IFB(BaseModel):
-    folder: Path = lib_settings.data_dir.joinpath("ifb")
+    folder: Path = lib_settings.ifb_dir
     bond_list: Path = folder.joinpath("bond_list.parquet")
     bond_page: Path = folder.joinpath("bond_page.parquet")
     payment_table: Path = folder.joinpath("payment_table.parquet")
     bond_info: Path = folder.joinpath("bond_info.parquet")
 
 
+class TSETMC(BaseModel):
+    folder: Path = lib_settings.tsetmc_dir
+    price: Path = folder.joinpath("price.parquet")
+    shareholders: Path = folder.joinpath("shareholders.parquet")
+
+
 class Tables(BaseModel):
     ifb: IFB = IFB()
+    tsetmc: TSETMC = TSETMC()
 
 
 tables = Tables()

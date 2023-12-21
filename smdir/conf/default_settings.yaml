@@ -1,3 +1,9 @@
+# Package Name
+package_name: SMDIR
 
-data_directory: Data
-online_directory: https://s3.ir-tbz-sh1.arvanstorage.ir/sdac
+# Local Directory
+local_dir: Data
+in_root: false
+
+# Bucket Address
+bucket_address: https://s3.ir-tbz-sh1.arvanstorage.ir/iran-open-data

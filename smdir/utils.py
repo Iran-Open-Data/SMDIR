@@ -15,13 +15,13 @@ def add_received_time(table: pd.DataFrame) -> pd.DataFrame:
 def create_key_form_path(file_path: Path) -> str:
     root_length = len(lib_settings.data_dir.parts)
     name = "/".join(file_path.parts[root_length:])
-    url = f"SMDIR/Data/{name}"
+    url = f"Data/{name}"
     return url
 
 
 def is_file_up_to_date(file_path: Path) -> bool:
     url = f"{lib_settings.online_dir}/{create_key_form_path(file_path)}"
-    response = requests.head(url, timeout=100)
+    response = requests.get(url, timeout=100, stream=True)
     try:
         online_file = int(response.headers["Content-Length"])
     except KeyError:
@@ -31,7 +31,6 @@ def is_file_up_to_date(file_path: Path) -> bool:
         local_file = file_path.stat().st_size
     except FileNotFoundError:
         local_file = 0
-
     return local_file == online_file
 
 

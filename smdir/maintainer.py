@@ -20,7 +20,7 @@ def _upload_file_to_online_directory(file_path):
         bucket.put_object(ACL="public-read", Body=file, Key=key)
 
 
-def _get_bucket(bucket_name="sdac"):
+def _get_bucket(bucket_name="iran-open-data"):
     with open("tokens.toml", "rb") as file:
         token = tomllib.load(file)["arvan"]
     s3_resource = boto3.resource(

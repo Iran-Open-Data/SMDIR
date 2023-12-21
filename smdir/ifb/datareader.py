@@ -13,23 +13,29 @@ def get_bond_list() -> pd.DataFrame:
     bond_list = pd.concat(
         [ListScraper(url).extract_table() for url in urls], ignore_index=True
     )
-    bond_list = add_received_time(bond_list)
+    bond_list = bond_list.pipe(add_received_time).sort_values(
+        "publication_date", ascending=False
+    )
     return bond_list
 
 
-def update_bond_list() -> None:
+def update_bond_list_from_source() -> None:
     new_bond_list = get_bond_list()
     try:
-        bond_list = pd.concat(
-            [pd.read_parquet(tables.ifb.bond_list), new_bond_list],
-            ignore_index=True,
-        ).drop_duplicates(
-            subset=["record_id", "document_id", "symbol"],
-            keep="first",
+        bond_list = (
+            pd.concat(
+                [pd.read_parquet(tables.ifb.bond_list), new_bond_list],
+                ignore_index=True,
+            )
+            .drop_duplicates(
+                subset=["record_id", "document_id", "symbol"],
+                keep="first",
+            )
+            .sort_values("publication_date", ascending=False)
         )
     except FileNotFoundError:
         bond_list = new_bond_list
-    bond_list.to_parquet(tables.ifb.bond_list)
+    bond_list.to_parquet(tables.ifb.bond_list, index=False)
 
 
 def get_bond_page(record_id: int) -> tuple[int, str, dict[str, list]]:
@@ -65,6 +71,7 @@ def extract_data_from_pages() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def update_bond_page(from_source=False) -> None:
     if from_source:
+        update_bond_list_from_source()
         update_bond_page_from_source()
     else:
         download_bond_page()
@@ -92,11 +99,11 @@ def update_bond_page_from_source() -> None:
     new_pages = add_received_time(new_pages)
 
     bond_page = pd.concat([bond_page, new_pages], ignore_index=True)
-    bond_page.to_parquet(tables.ifb.bond_page)
+    bond_page.to_parquet(tables.ifb.bond_page, index=False)
 
     payment_table, info_table = extract_data_from_pages()
-    payment_table.to_parquet(tables.ifb.payment_table)
-    info_table.to_parquet(tables.ifb.bond_info)
+    payment_table.to_parquet(tables.ifb.payment_table, index=False)
+    info_table.to_parquet(tables.ifb.bond_info, index=False)
 
 
 def download_bond_page() -> None:
