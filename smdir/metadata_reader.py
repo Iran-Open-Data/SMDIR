@@ -1,9 +1,10 @@
 from pathlib import Path
+from typing import Callable
 import inspect
 
+import pandas as pd
 from pydantic import BaseModel
 import yaml
-
 
 package_dir = Path(__file__).parent
 root_dir = Path()
@@ -28,20 +29,20 @@ except FileNotFoundError:
 
 
 def get_metadata(*path_parts: str) -> dict | list:
-    path_parts = ["metadata"] + list(path_parts)
-    path_parts[-1] = path_parts[-1] + ".yaml"
+    parts = ["metadata"] + list(path_parts)
+    parts[-1] = parts[-1] + ".yaml"
     caller_path = Path(inspect.stack()[1].filename)
-    meta_path = caller_path.parent.joinpath(*path_parts)
+    meta_path = caller_path.parent.joinpath(*parts)
     with meta_path.open(encoding="utf-8") as yaml_file:
         metadata = yaml.safe_load(yaml_file)
     return metadata
 
 
 def save_metadata(content: dict | list, *path_parts: str) -> None:
-    path_parts = ["metadata"] + list(path_parts)
-    path_parts[-1] = path_parts[-1] + ".yaml"
+    parts = ["metadata"] + list(path_parts)
+    parts[-1] = parts[-1] + ".yaml"
     caller_path = Path(inspect.stack()[1].filename)
-    meta_path = caller_path.parent.joinpath(*path_parts)
+    meta_path = caller_path.parent.joinpath(*parts)
     with meta_path.open(mode="w", encoding="utf-8") as yaml_file:
         yaml.safe_dump(content, yaml_file, encoding="utf-8", allow_unicode=True)
 
@@ -52,37 +53,68 @@ class Settings(BaseModel):
     bucket_address: str = settings_dict["bucket_address"]
     online_dir: str = f"{bucket_address}/{package_name}"
 
-    ifb_dir: Path = data_dir.joinpath("ifb")
-    tsetmc_dir: Path = data_dir.joinpath("tsetmc")
-    codal_dir: Path = data_dir.joinpath("codal")
-
-    def model_post_init(self, __context=None) -> None:
-        self.data_dir.mkdir(exist_ok=True, parents=True)
-        self.ifb_dir.mkdir(exist_ok=True)
-        self.tsetmc_dir.mkdir(exist_ok=True)
-        self.codal_dir.mkdir(exist_ok=True)
-
 
 lib_settings = Settings()
 
 
-class IFB(BaseModel):
-    folder: Path = lib_settings.ifb_dir
-    bond_list: Path = folder.joinpath("bond_list.parquet")
-    bond_page: Path = folder.joinpath("bond_page.parquet")
-    payment_table: Path = folder.joinpath("payment_table.parquet")
-    bond_info: Path = folder.joinpath("bond_info.parquet")
+class Table:
+    directory: Path
+    name: str
+    api_params: list[str]
+    records_address: list[str]
+    partition: list[str] | None = None
+    keys: list[str]
+    validator: Callable | None = None
+
+    def __init__(self) -> None:
+        self.path = self.directory.joinpath(f"{self.name}.parquet")
+        self.set_table_in_columns(self)
+
+    def __fspath__(self) -> str:
+        return self.path.__fspath__()
+
+    @property
+    def raw(self) -> Path:
+        return self.path.parent.joinpath(self.path.stem + "_raw" + self.path.suffix)
+
+    @classmethod
+    def set_table_in_columns(cls, self) -> None:
+        for key, value in cls.__dict__.items():
+            if not isinstance(value, Column):
+                continue
+            setattr(value, "new_name", key)
+            setattr(value, "table", self)
+
+    @classmethod
+    def get_columns(cls) -> dict:
+        return {
+            key: value.address
+            for key, value in cls.__dict__.items()
+            if isinstance(value, Column) and value.address is not None
+        }
+
+    def validate_input(self, _input: dict) -> dict:
+        if self.validator is None:
+            raise ValueError
+        # pylint: disable=not-callable
+        return self.validator(**_input).model_dump()
+
+    def post_process(self, table: pd.DataFrame) -> pd.DataFrame:
+        return table
 
 
-class TSETMC(BaseModel):
-    folder: Path = lib_settings.tsetmc_dir
-    price: Path = folder.joinpath("price.parquet")
-    shareholders: Path = folder.joinpath("shareholders.parquet")
+class Column:
+    table: Table
+    new_name: str
 
-
-class Tables(BaseModel):
-    ifb: IFB = IFB()
-    tsetmc: TSETMC = TSETMC()
-
-
-tables = Tables()
+    def __init__(self, address: str | list[str] | tuple[str, ...] | None = None):
+        if address is None:
+            self.address = address
+        elif isinstance(address, str):
+            self.address = (address,)
+        elif isinstance(address, tuple):
+            self.address = address
+        elif isinstance(address, list):
+            self.address = address
+        else:
+            raise ValueError

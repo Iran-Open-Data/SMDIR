@@ -41,6 +41,11 @@ def download_file(file_path: Path) -> None:
         file.write(response.content)
 
 
+def split_dataframe(df: pd.DataFrame, n: int = 4) -> list[pd.DataFrame]:
+    number_of_rows = len(df.index) // n + 1
+    return [df.iloc[i * number_of_rows : (i + 1) * number_of_rows] for i in range(n)]
+
+
 class MapTitles:
     def __init__(self, label_map: list[dict[str, str]]) -> None:
         self.label_map = label_map

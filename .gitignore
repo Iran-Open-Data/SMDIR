@@ -1,6 +1,7 @@
-
+.vscode/*
 .venv/*
 
+*draft.ipynb
 *.pyc
 
 settings.yaml

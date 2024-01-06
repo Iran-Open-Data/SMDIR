@@ -28,7 +28,9 @@ class _IFBBaseScraper:
         self.response = None
         self.soup: BeautifulSoup
         if self.column_rename != "":
-            self.columns_translation: dict = get_metadata(self.column_rename)
+            column_rename = get_metadata(self.column_rename)
+            assert isinstance(column_rename, dict)
+            self.columns_translation: dict = column_rename
 
         self._get_page()
 
@@ -66,9 +68,11 @@ class _IFBBaseScraper:
                 pass
             return False
 
-        options = self.soup.find("div", {"class": "sizeselector"}).find_all(
-            "option"
-        )  # type: ignore
+        options = (
+            self.soup
+            .find("div", {"class": "sizeselector"})
+            .find_all("option")  # type: ignore
+        )
         selected_option = [
             int(option["value"]) for option in options if is_selected(option)
         ][0]
@@ -179,8 +183,8 @@ class ListScraper(_IFBBaseScraper):
 
         table = pd.concat(
             [
-                pd.DataFrame(record_ids, columns=["record_id"]),
-                pd.DataFrame(document_id, columns=["document_id"]),
+                pd.DataFrame(record_ids, columns=["Record_ID"]),
+                pd.DataFrame(document_id, columns=["Document_ID"]),
                 pd.DataFrame(cells, columns=columns),
             ],
             axis="columns",
@@ -204,7 +208,7 @@ class PageScraper(_IFBBaseScraper):
         self._get_page()
         page_str = str(self.soup)
         payment_table = self.extract_table().to_dict("list")
-        return (self.record_id, page_str, payment_table)
+        return (self.record_id, page_str, payment_table)  # type: ignore
 
     def extract_page_table(self) -> pd.DataFrame:
         """docs"""
@@ -231,7 +235,7 @@ def extract_page_data(page_html: str) -> pd.DataFrame:
         ]
     )
     columns_translation = get_metadata("page_columns")
-    table[0] = MapTitles(columns_translation).map_titles(table[0].to_list())
+    table[0] = MapTitles(columns_translation).map_titles(table[0].to_list())  # type: ignore
     page_data = table.set_index(0).T
     page_data = page_data.replace("", None)
     return page_data
