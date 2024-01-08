@@ -24,4 +24,5 @@ def str_to_int(__input: int | str) -> int:
 
     return int(__input.replace(" ", ""))
 
+
 Int = Annotated[int, BeforeValidator(str_to_int)]

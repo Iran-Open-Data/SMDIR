@@ -6,8 +6,10 @@ from .metadata_reader import lib_settings
 from .utils import create_key_form_path, is_file_up_to_date
 
 
-def update_files() -> None:
+def update_files(ignore_raw_files=True) -> None:
     for file in lib_settings.data_dir.rglob("*.parquet"):
+        if ignore_raw_files and ("raw" in file.name):
+            continue
         if is_file_up_to_date(file):
             continue
         _upload_file_to_online_directory(file)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 import pandas as pd
 
@@ -32,6 +33,14 @@ class TABLES:
 
 tables = TABLES()
 
+
+ItamAlias = Literal["Price",]
+
+item_aliases = {
+    "Price": tables.tsetmc.daily_closing_price.Closing_Price,
+}
+
+
 def load_table(
     table: Table, columns: list[Column] | None = None, *, update: bool = False
 ) -> pd.DataFrame:
@@ -50,13 +59,15 @@ def load_table(
 def search_security(dataset: pd.DataFrame, security: str) -> pd.DataFrame:
     def match_security(column: pd.Series, string) -> pd.Series:
         return column.str.match(string)
-    return dataset.loc[dataset.apply(match_security, string=security).any(axis="columns")]
+
+    return dataset.loc[
+        dataset.apply(match_security, string=security).any(axis="columns")
+    ]
 
 
 def load_data(
-    items: list[Column], securities: list[str] | str
+    items: list[Column] | ItamAlias, securities: list[str] | str
 ) -> pd.DataFrame:
-
     securities = [securities] if isinstance(securities, str) else securities
     security_aliases = get_metadata("security_aliases")
     assert isinstance(security_aliases, dict)
@@ -78,7 +89,14 @@ def load_data(
     )
     key_table = key_table.set_index(keys)
 
-    columns_to_get = items
+    columns_to_get = []
+    for item in items:
+        if item in item_aliases:
+            columns_to_get.append(item_aliases[item])
+        elif isinstance(item, Column):
+            columns_to_get.append(item)
+        else:
+            raise ValueError
     tables_to_get: dict[Table, list[Column]] = {}
     for column in columns_to_get:
         if column.table not in tables_to_get:

@@ -5,3 +5,7 @@ government_bonds:
   - اجاد*
   - اشاد*
   - گندم*
+
+
+bonds:
+  - government_bonds

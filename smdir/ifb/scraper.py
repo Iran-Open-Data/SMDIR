@@ -68,14 +68,15 @@ class _IFBBaseScraper:
                 pass
             return False
 
-        options = (
-            self.soup
-            .find("div", {"class": "sizeselector"})
-            .find_all("option")  # type: ignore
-        )
-        selected_option = [
-            int(option["value"]) for option in options if is_selected(option)
-        ][0]
+        options = self.soup.find("div", {"class": "sizeselector"})
+        options = options.find_all("option")  # type: ignore
+        selected_option = None
+        for option in options:
+            if is_selected(option):
+                selected_option = int(option["value"])
+                break
+        if selected_option is None:
+            raise ValueError
         return selected_option
 
     def change_pagination(self, records_per_page: int = 50):
@@ -183,7 +184,7 @@ class ListScraper(_IFBBaseScraper):
 
         table = pd.concat(
             [
-                pd.DataFrame(record_ids, columns=["Record_ID"]),
+                pd.DataFrame(record_ids, columns=["IFB_ID"]),
                 pd.DataFrame(document_id, columns=["Document_ID"]),
                 pd.DataFrame(cells, columns=columns),
             ],

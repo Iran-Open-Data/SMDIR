@@ -1,3 +1,4 @@
+from pandas import DataFrame
 from pydantic import BaseModel, ConfigDict
 
 from .common import TSETMCReader, tsetmc_directory
@@ -53,9 +54,11 @@ class TableMetadata(Table):
     name = "shareholders"
     api_params = ["ins_code", "date_id"]
     records_address = ["shareShareholder"]
+    keys = ["INS_Code", "Date_ID", "Shareholder_ID"]
     validator = Validator
     # partition = ["ins_code"]
 
+    INS_Code = Column()
     Date_ID = Column("dEven")
     Shareholder_ID = Column("shareHolderID")
     Shareholder_Name = Column("shareHolderName")
@@ -63,6 +66,14 @@ class TableMetadata(Table):
     Number_of_Shares = Column("numberOfShares")
     Share_Percentage = Column("perOfShares")
 
+    def post_process(self, table: DataFrame) -> DataFrame:
+        return (
+            table
+            .sort_values(["date_id", "Date_ID"], ascending=False)
+            .drop_duplicates(["ins_code", "Date_ID", "Shareholder_ID"])
+            .rename(columns={"ins_code": "INS_Code"})
+            .drop(columns=["date_id"])
+        )
 
 table_metadata = TableMetadata()
 

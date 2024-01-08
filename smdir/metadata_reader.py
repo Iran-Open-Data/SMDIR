@@ -60,13 +60,15 @@ lib_settings = Settings()
 class Table:
     directory: Path
     name: str
-    api_params: list[str]
-    records_address: list[str]
+    api_params: list[str] = []
+    records_address: list[str] = []
     partition: list[str] | None = None
-    keys: list[str]
+    keys: list[str] = []
     validator: Callable | None = None
 
     def __init__(self) -> None:
+        if not self.directory.exists():
+            self.directory.mkdir(parents=True, exist_ok=True)
         self.path = self.directory.joinpath(f"{self.name}.parquet")
         self.set_table_in_columns(self)
 
@@ -107,7 +109,7 @@ class Column:
     table: Table
     new_name: str
 
-    def __init__(self, address: str | list[str] | tuple[str, ...] | None = None):
+    def __init__(self, address: str | int | list[str | int] | tuple[str | int, ...] | None = None):
         if address is None:
             self.address = address
         elif isinstance(address, str):

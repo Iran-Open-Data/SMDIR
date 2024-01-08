@@ -6,6 +6,7 @@ import json
 import itertools
 
 import requests
+from requests.exceptions import SSLError
 from requests.models import Response
 import pandas as pd
 
@@ -30,8 +31,9 @@ class DataReader:
         response = requests.get(url=url, headers=self.headers, timeout=100)
         try:
             result = self.parse(response)
-        except json.JSONDecodeError:
-            print(f"Parsing failed for {kwargs}. Retrying ...")
+        except (json.JSONDecodeError, SSLError):
+            print(f"Geting data failed for {kwargs}. Retrying ...")
+            print(response.content)
             time.sleep(20 + random.random() * 80)
             return self.get(**kwargs)
         if self.table_metadata.validator is not None:
@@ -86,22 +88,19 @@ class DataReader:
         key_frame = key_frame.copy()
         key_frame.columns = key_frame.columns.str.lower()
         key_frame = key_frame[params_list].drop_duplicates()
-        if ignore_existing:
-            try:
-                key_frame["ToGet"] = 1
-                existing_keys = pd.read_parquet(self.raw_path, columns=params_list)
-                key_frame = (
-                    pd.concat([key_frame, existing_keys])
-                    .drop_duplicates(params_list, keep=False)
-                    .loc[lambda df: df["ToGet"] == 1]
-                    .drop(columns=["ToGet"])
-                )
-                if len(key_frame.index) == 0:
-                    return
-            except FileNotFoundError:
-                pass
+        if ignore_existing and self.raw_path.exists():
+            key_frame["ToGet"] = 1
+            existing_keys = pd.read_parquet(self.raw_path, columns=params_list)
+            key_frame = (
+                pd.concat([key_frame, existing_keys])
+                .drop_duplicates(params_list, keep=False)
+                .loc[lambda df: df["ToGet"] == 1]
+                .drop(columns=["ToGet"])
+            )
+            if len(key_frame.index) == 0:
+                return
         print(f"{len(key_frame)} records to get")
-        number = (len(key_frame)-1) // 5000 + 1
+        number = (len(key_frame) - 1) // 5000 + 1
         key_frame_parts = utils.split_dataframe(key_frame, number)
         for part in key_frame_parts:
             self._update_raw_table_part(part)
@@ -120,16 +119,16 @@ class DataReader:
             .drop_duplicates(columns, keep="last")
             .reset_index(drop=True)
         )
-        table.to_parquet(self.raw_path, partition_cols=self.table_metadata.partition, index=False)
+        table.to_parquet(
+            self.raw_path, partition_cols=self.table_metadata.partition, index=False
+        )
 
     def create_table(self) -> pd.DataFrame:
         records = pd.read_parquet(self.raw_path).sort_values(
             "recived_time", ascending=False
         )
         if len(self.table_metadata.api_params) > 0:
-            records = records.drop_duplicates(
-                subset=self.table_metadata.api_params
-            )
+            records = records.drop_duplicates(self.table_metadata.api_params)
         else:
             records = records.iloc[:1, :]
         records = records.apply(self.create_records, axis=1)  # type: ignore
@@ -140,6 +139,8 @@ class DataReader:
 
     def create_records(self, row: pd.Series) -> list[dict]:
         data = json.loads(row["JSON"])
+        if data == {}:
+            return []
         api_params = row[self.table_metadata.api_params].to_dict()
         for address_part in self.table_metadata.records_address:
             data = data[address_part]
@@ -157,7 +158,11 @@ class DataReader:
         for name, original_name in self.table_metadata.get_columns().items():
             value = raw_record
             for key in original_name:
-                value = value[key]
+                try:
+                    value = value[key]
+                except IndexError:
+                    value = None
+                    break
             record[name] = value
         return record
 

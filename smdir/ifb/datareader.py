@@ -7,6 +7,7 @@ from .scraper import ListScraper, PageScraper, extract_page_data
 
 ifb_directory = lib_settings.data_dir.joinpath("ifb")
 
+
 class ListMetadata(Table):
     directory = ifb_directory
     name = "bond_list"
@@ -23,6 +24,7 @@ class ListMetadata(Table):
     Fluctuation_Range = Column()
     Description = Column()
     Documents_and_Records = Column()
+
 
 bond_list_metadata = ListMetadata()
 
@@ -114,7 +116,7 @@ def update_bond_list_from_source() -> None:
                 ignore_index=True,
             )
             .drop_duplicates(
-                subset=["Record_ID"],
+                subset=["IFB_ID"],
                 keep="first",
             )
             .sort_values("Publication_Date", ascending=False)
@@ -134,7 +136,7 @@ def extract_data_from_pages() -> tuple[pd.DataFrame, pd.DataFrame]:
     bond_page = (
         pd.read_parquet(bond_page_metadata)
         .sort_values("received_time", ascending=False)
-        .drop_duplicates("Record_ID", keep="first")
+        .drop_duplicates("IFB_ID", keep="first")
     )
     payment_dict = {}
     info_dict = {}
@@ -143,11 +145,11 @@ def extract_data_from_pages() -> tuple[pd.DataFrame, pd.DataFrame]:
         if row["payment_table"]["date"] is None:
             pass
         else:
-            payment_dict[row["Record_ID"]] = pd.DataFrame(row["payment_table"])
-        info_dict[row["Record_ID"]] = extract_page_data(row["page"])
+            payment_dict[row["IFB_ID"]] = pd.DataFrame(row["payment_table"])
+        info_dict[row["IFB_ID"]] = extract_page_data(row["page"])
 
     payment_table = (
-        pd.concat(payment_dict, names=["Record_ID", "index"])
+        pd.concat(payment_dict, names=["IFB_ID", "index"])
         .reset_index()
         .drop(columns="index")
     )
@@ -155,7 +157,7 @@ def extract_data_from_pages() -> tuple[pd.DataFrame, pd.DataFrame]:
         payment_table["value"].str.replace("/", ".").str.replace(",", "").astype(float)
     )
     info_table = (
-        pd.concat(info_dict, names=["Record_ID", "index"])
+        pd.concat(info_dict, names=["IFB_ID", "index"])
         .reset_index()
         .drop(columns="index")
     )
@@ -163,7 +165,7 @@ def extract_data_from_pages() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def update_bond_page_from_source() -> None:
-    bond_list = pd.read_parquet(bond_list_metadata, columns=["Record_ID"])
+    bond_list = pd.read_parquet(bond_list_metadata, columns=["IFB_ID"])
 
     try:
         bond_page = pd.read_parquet(bond_page_metadata)
@@ -171,16 +173,16 @@ def update_bond_page_from_source() -> None:
         bond_page = pd.DataFrame()
 
     if bond_page.empty:
-        missing_records = bond_list["Record_ID"].to_list()
+        missing_records = bond_list["IFB_ID"].to_list()
     else:
-        filt = -bond_list["Record_ID"].isin(bond_page["Record_ID"])
-        missing_records = bond_list.loc[filt, "Record_ID"].to_list()
+        filt = -bond_list["IFB_ID"].isin(bond_page["IFB_ID"])
+        missing_records = bond_list.loc[filt, "IFB_ID"].to_list()
 
     page_list = []
     for record_id in missing_records:
         page_list.append(get_bond_page(record_id))
 
-    new_pages = pd.DataFrame(page_list, columns=["Record_ID", "page", "payment_table"])
+    new_pages = pd.DataFrame(page_list, columns=["IFB_ID", "page", "payment_table"])
     new_pages = add_received_time(new_pages)
 
     bond_page = pd.concat([bond_page, new_pages], ignore_index=True)
