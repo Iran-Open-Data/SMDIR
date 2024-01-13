@@ -42,7 +42,7 @@ item_aliases = {
 
 
 def load_table(
-    table: Table, columns: list[Column] | None = None, *, update: bool = False
+    table: Table, columns: list[Column] | None = None, *, update: bool = True
 ) -> pd.DataFrame:
     if not table.path.exists() or update:
         utils.download_file(table.path)
@@ -66,27 +66,33 @@ def search_security(dataset: pd.DataFrame, security: str) -> pd.DataFrame:
 
 
 def load_data(
-    items: list[Column] | ItamAlias, securities: list[str] | str
+    items: list[Column] | ItamAlias,
+    securities: list[str] | str | None = None,
+    update: bool = True,
 ) -> pd.DataFrame:
-    securities = [securities] if isinstance(securities, str) else securities
-    security_aliases = get_metadata("security_aliases")
-    assert isinstance(security_aliases, dict)
-    securitie_list = []
-    while len(securities) > 0:
-        security = securities[0]
-        if security in security_aliases:
-            assert isinstance(security_aliases[security], list)
-            securities.extend(security_aliases[security])
-        else:
-            securitie_list.append(security)
-        securities.pop(0)
+    if securities is None:
+        securitie_list = None
+    else:
+        securities = [securities] if isinstance(securities, str) else securities
+        security_aliases = get_metadata("security_aliases")
+        assert isinstance(security_aliases, dict)
+        securitie_list = []
+        while len(securities) > 0:
+            security = securities[0]
+            if security in security_aliases:
+                assert isinstance(security_aliases[security], list)
+                securities.extend(security_aliases[security])
+            else:
+                securitie_list.append(security)
+            securities.pop(0)
 
     keys = ["INS_Code", "ISIN", "Farsi_Symbol"]
-    key_table = load_table(tables.tsetmc.security_identity)[keys]
-    key_table = pd.concat(
-        [search_security(key_table, security) for security in securitie_list],
-        ignore_index=True,
-    )
+    key_table = load_table(tables.tsetmc.security_identity, update=update)[keys]
+    if securitie_list is not None:
+        key_table = pd.concat(
+            [search_security(key_table, security) for security in securitie_list],
+            ignore_index=True,
+        )
     key_table = key_table.set_index(keys)
 
     columns_to_get = []
@@ -107,7 +113,7 @@ def load_data(
             continue
         tables_to_get[column.table].append(column)
     table_list = [
-        load_table(table, columns).set_index(table.keys)
+        load_table(table, columns, update=update).set_index(table.keys)
         for table, columns in tables_to_get.items()
     ]
     for table in table_list:

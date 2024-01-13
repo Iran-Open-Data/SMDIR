@@ -169,3 +169,6 @@ class DataReader:
     def update_table(self) -> None:
         table = self.create_table()
         table.to_parquet(self.table_metadata.path, index=False)
+
+    def open_table(self) -> pd.DataFrame:
+        return pd.read_parquet(self.table_metadata.path)

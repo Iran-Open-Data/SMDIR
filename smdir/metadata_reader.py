@@ -109,7 +109,9 @@ class Column:
     table: Table
     new_name: str
 
-    def __init__(self, address: str | int | list[str | int] | tuple[str | int, ...] | None = None):
+    def __init__(
+        self, address: str | int | list[str | int] | tuple[str | int, ...] | None = None
+    ):
         if address is None:
             self.address = address
         elif isinstance(address, str):

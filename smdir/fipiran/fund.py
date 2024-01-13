@@ -274,7 +274,6 @@ class TableMetadata(Table):
     FundPublisher = Column("fundPublisher")
 
 
-
 table_metadata = TableMetadata()
 
 reader = FIPReader(
