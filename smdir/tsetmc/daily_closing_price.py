@@ -89,6 +89,9 @@ class TableMetadata(Table):
     First_Price = Column("priceFirst")
     Minimum_Price = Column("priceMin")
     Maximum_Price = Column("priceMax")
+    Number_of_Transactions = Column("zTotTran")
+    Volume_of_Transactions = Column("qTotTran5J")
+    Value_of_Transactions = Column("qTotCap")
 
 
 table_metadata = TableMetadata()
