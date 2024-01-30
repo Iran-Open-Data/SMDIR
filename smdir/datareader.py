@@ -6,7 +6,8 @@ import json
 import itertools
 
 import requests
-from requests.exceptions import SSLError
+
+# import requests.exceptions
 from requests.models import Response
 import pandas as pd
 
@@ -24,18 +25,37 @@ class DataReader:
         self.url_pattern = url_pattern
         self.raw_path = self.table_metadata.raw
 
-    def get(self, **kwargs) -> dict:
+    def get(self, retry: int = 0, **kwargs) -> dict:
         for key in self.table_metadata.api_params:
             assert key in kwargs
         url = self.url_pattern.format(**kwargs)
-        response = requests.get(url=url, headers=self.headers, timeout=100)
+        try:
+            response = requests.get(url=url, headers=self.headers, timeout=100)
+        except requests.exceptions.RequestException:
+            retry += 1
+            print(f"Getting data failed for {kwargs}. Retrying ... ({retry})")
+            if retry == 0:
+                time.sleep(20 + random.random() * 80)
+            else:
+                time.sleep(1)
+            if retry < 5:
+                return self.get(retry=retry, **kwargs)
+            return {}
+        if self.table_metadata.is_raw_text:
+            return {"text": response.text}
         try:
             result = self.parse(response)
-        except (json.JSONDecodeError, SSLError):
-            print(f"Geting data failed for {kwargs}. Retrying ...")
+        except (json.JSONDecodeError, requests.exceptions.RequestException):
+            retry += 1
+            print(f"Parsing data failed for {kwargs}. Retrying ... ({retry})")
             print(response.content)
-            time.sleep(20 + random.random() * 80)
-            return self.get(**kwargs)
+            if retry == 0:
+                time.sleep(20 + random.random() * 80)
+            else:
+                time.sleep(1)
+            if retry < 5:
+                return self.get(retry=retry, **kwargs)
+            return {}
         if self.table_metadata.validator is not None:
             result = self.table_metadata.validate_input(result)
         assert isinstance(result, dict)
