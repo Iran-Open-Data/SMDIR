@@ -210,6 +210,7 @@ class TableMetadata(Table):
     directory = codal_directory
     name = "publisher_list"
     records_address = ["records"]
+    keep_history = False
 
     Symbol = Column("Symbol")
     Name = Column("Name")

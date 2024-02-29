@@ -65,6 +65,7 @@ class Table:
     partition: list[str] | None = None
     keys: list[str] = []
     validator: Callable | None = None
+    keep_history: bool = False
     is_raw_text: bool = False
 
     def __init__(self) -> None:

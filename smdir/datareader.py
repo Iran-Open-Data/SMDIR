@@ -25,7 +25,8 @@ class DataReader:
         self.url_pattern = url_pattern
         self.raw_path = self.table_metadata.raw
 
-    def get(self, retry: int = 0, **kwargs) -> dict:
+    def get(self, **kwargs) -> dict:
+        retry = 0 if "retry" not in kwargs else kwargs["retry"]
         for key in self.table_metadata.api_params:
             assert key in kwargs
         url = self.url_pattern.format(**kwargs)
@@ -34,12 +35,12 @@ class DataReader:
         except requests.exceptions.RequestException:
             retry += 1
             print(f"Getting data failed for {kwargs}. Retrying ... ({retry})")
-            if retry == 0:
+            if retry < 2:
                 time.sleep(20 + random.random() * 80)
             else:
                 time.sleep(1)
             if retry < 5:
-                return self.get(retry=retry, **kwargs)
+                return self.get(**kwargs)
             return {}
         if self.table_metadata.is_raw_text:
             return {"text": response.text}
@@ -49,12 +50,12 @@ class DataReader:
             retry += 1
             print(f"Parsing data failed for {kwargs}. Retrying ... ({retry})")
             print(response.content)
-            if retry == 0:
+            if retry < 2:
                 time.sleep(20 + random.random() * 80)
             else:
                 time.sleep(1)
             if retry < 5:
-                return self.get(retry=retry, **kwargs)
+                return self.get(**kwargs)
             return {}
         if self.table_metadata.validator is not None:
             result = self.table_metadata.validate_input(result)
@@ -147,13 +148,17 @@ class DataReader:
         records = pd.read_parquet(self.raw_path).sort_values(
             "recived_time", ascending=False
         )
-        if len(self.table_metadata.api_params) > 0:
+        if self.table_metadata.keep_history:
+            pass
+        elif len(self.table_metadata.api_params) > 0:
             records = records.drop_duplicates(self.table_metadata.api_params)
         else:
             records = records.iloc[:1, :]
         records = records.apply(self.create_records, axis=1)  # type: ignore
         records = itertools.chain.from_iterable(records)
         table = pd.DataFrame.from_records(records)
+        if self.table_metadata.keep_history:
+            table = table.drop_duplicates(table.columns[:-1])
         table = self.table_metadata.post_process(table)
         return table
 
@@ -170,6 +175,7 @@ class DataReader:
         for raw_record in data:
             record = api_params.copy()
             record.update(self._create_record(raw_record))
+            record["recived_time"] = row["recived_time"]
             records.append(record)
         return records
 

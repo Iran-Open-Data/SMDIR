@@ -1,3 +1,4 @@
+import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
 from .common import TSETMCReader, tsetmc_directory
@@ -92,6 +93,14 @@ class TableMetadata(Table):
     Number_of_Transactions = Column("zTotTran")
     Volume_of_Transactions = Column("qTotTran5J")
     Value_of_Transactions = Column("qTotCap")
+
+    def post_process(self, table: pd.DataFrame) -> pd.DataFrame:
+        return (
+            table
+            .loc[lambda df: df["Number_of_Transactions"].gt(0)]
+            .drop(columns=["ins_code", "recived_time"])
+            .assign(Date=lambda df: pd.to_datetime(df["Date_ID"], format=r"%Y%m%d"))
+        )
 
 
 table_metadata = TableMetadata()

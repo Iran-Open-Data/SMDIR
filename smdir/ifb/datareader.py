@@ -180,7 +180,10 @@ def update_bond_page_from_source() -> None:
 
     page_list = []
     for record_id in missing_records:
-        page_list.append(get_bond_page(record_id))
+        try:
+            page_list.append(get_bond_page(record_id))
+        except ValueError:
+            pass
 
     new_pages = pd.DataFrame(page_list, columns=["IFB_ID", "page", "payment_table"])
     new_pages = add_received_time(new_pages)

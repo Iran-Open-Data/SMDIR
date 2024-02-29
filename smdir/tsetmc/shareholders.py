@@ -66,13 +66,13 @@ class TableMetadata(Table):
     Number_of_Shares = Column("numberOfShares")
     Share_Percentage = Column("perOfShares")
 
-    def post_process(self, table: DataFrame) -> DataFrame:
-        return (
-            table.sort_values(["date_id", "Date_ID"], ascending=False)
-            .drop_duplicates(["ins_code", "date_id", "Shareholder_ID"], keep="first")
-            .drop(columns=["Date_ID"])
-            .rename(columns={"ins_code": "INS_Code", "date_id": "Date_ID"})
-        )
+    # def post_process(self, table: DataFrame) -> DataFrame:
+    #     return (
+    #         table.sort_values(["date_id", "Date_ID"], ascending=False)
+    #         .drop_duplicates(["ins_code", "date_id", "Shareholder_ID"], keep="first")
+    #         .drop(columns=["Date_ID"])
+    #         .rename(columns={"ins_code": "INS_Code", "date_id": "Date_ID"})
+    #     )
 
 
 table_metadata = TableMetadata()

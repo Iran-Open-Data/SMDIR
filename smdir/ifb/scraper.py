@@ -35,7 +35,9 @@ class _IFBBaseScraper:
         self._get_page()
 
     def _get_page(self) -> None:
-        self.response = requests.get(self.url, timeout=1000)
+        self.response = requests.get(self.url, allow_redirects=False, timeout=1000)
+        if self.response.status_code != 200:
+            raise ValueError
         self.soup = BeautifulSoup(self.response.content, "html.parser")
 
     def read_page_status(self) -> tuple[int, int | None]:

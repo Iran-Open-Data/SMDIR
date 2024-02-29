@@ -8,6 +8,9 @@ class TableMetadata(Table):
     api_params = ["symbol", "page_number"]
     records_address = ["Letters"]
 
+    Symbol = Column("Symbol")
+    Name = Column("CompanyName")
+
 
 table_metadata = TableMetadata()
 
